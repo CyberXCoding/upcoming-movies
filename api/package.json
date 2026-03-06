@@ -1,0 +1,16 @@
+{
+  "name": "upcoming-movies-api",
+  "version": "1.0.0",
+  "description": "API to scrape upcoming movies from Sacnilk",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "keywords": ["movies", "api", "scraper"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "node-fetch": "^2.6.7"
+  }
+}
