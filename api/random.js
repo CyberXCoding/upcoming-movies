@@ -1,4 +1,5 @@
 const fetch = require('node-fetch');
+const { getAllMovies } = require('./utils/movieScraper');
 
 const OMDB_API_KEY = '4d146d7';
 const OMDB_BASE_URL = 'https://www.omdbapi.com/';
@@ -13,19 +14,20 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // First, get list of upcoming movies
-    const moviesResponse = await fetch(`${req.headers.host || 'localhost:3000'}/api/movies`);
-    
-    // Fallback: if can't fetch from our API, use some popular upcoming movies
+    // Get all movies using shared function (NO HTTP call needed!)
     let moviesList = [];
     
     try {
-      const moviesData = await moviesResponse.json();
+      const moviesData = await getAllMovies();
       if (moviesData.success && moviesData.movies.length > 0) {
         moviesList = moviesData.movies.map(m => m.title || m);
       }
     } catch (e) {
-      // Fallback list
+      console.error('Error fetching movies:', e);
+    }
+
+    // Fallback list if scraping fails
+    if (moviesList.length === 0) {
       moviesList = [
         "Avengers: Doomsday",
         "Ramayana Part 1",
@@ -33,7 +35,11 @@ module.exports = async (req, res) => {
         "Vishwambhara",
         "Mortal Kombat II",
         "Ustaad Bhagat Singh",
-        "Dacoit"
+        "Dacoit",
+        "Dhurandhar: The Revenge",
+        "The Paradise",
+        "Awarapan 2",
+        "Bhooth Bangla"
       ];
     }
 
