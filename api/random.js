@@ -14,36 +14,22 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Get all movies using shared function (NO HTTP call needed!)
-    let moviesList = [];
+    // Get LIVE upcoming movies (NO HARDCODED DATA!)
+    const moviesData = await getAllMovies();
     
-    try {
-      const moviesData = await getAllMovies();
-      if (moviesData.success && moviesData.movies.length > 0) {
-        moviesList = moviesData.movies.map(m => m.title || m);
-      }
-    } catch (e) {
-      console.error('Error fetching movies:', e);
+    // Check if scraping was successful
+    if (!moviesData.success || !moviesData.movies || moviesData.movies.length === 0) {
+      return res.status(503).json({
+        success: false,
+        error: "Unable to fetch upcoming movies at this time. Please try again later.",
+        message: "Movie scraping failed or no upcoming movies found"
+      });
     }
 
-    // Fallback list if scraping fails
-    if (moviesList.length === 0) {
-      moviesList = [
-        "Avengers: Doomsday",
-        "Ramayana Part 1",
-        "Toxic",
-        "Vishwambhara",
-        "Mortal Kombat II",
-        "Ustaad Bhagat Singh",
-        "Dacoit",
-        "Dhurandhar: The Revenge",
-        "The Paradise",
-        "Awarapan 2",
-        "Bhooth Bangla"
-      ];
-    }
+    // Extract only movie titles from live data
+    const moviesList = moviesData.movies.map(m => m.title);
 
-    // Pick a random movie
+    // Pick a RANDOM movie from LIVE upcoming movies ONLY
     const randomMovie = moviesList[Math.floor(Math.random() * moviesList.length)];
 
     // Fetch details from OMDB
@@ -52,21 +38,53 @@ module.exports = async (req, res) => {
     const omdbData = await omdbResponse.json();
 
     if (omdbData.Response === "False") {
-      return res.status(404).json({
-        success: false,
-        error: `Movie "${randomMovie}" not found in OMDB database`,
-        searchedTitle: randomMovie,
-        suggestion: "Try another random request or the movie data may not be available yet"
+      // Movie not found in OMDB, but still return info that it's an upcoming movie
+      return res.status(200).json({
+        success: true,
+        movie: {
+          title: randomMovie,
+          year: "N/A",
+          releaseDate: "Upcoming",
+          rated: "N/A",
+          runtime: "N/A",
+          genre: [],
+          director: "N/A",
+          writer: "N/A",
+          actors: [],
+          plot: "This is an upcoming movie. Detailed information not yet available in OMDB database.",
+          language: [],
+          country: [],
+          poster: null,
+          ratings: [],
+          imdbRating: "N/A",
+          imdbVotes: "N/A",
+          imdbID: "N/A",
+          metascore: "N/A",
+          awards: "N/A",
+          boxOffice: "N/A",
+          production: "N/A",
+          type: "movie",
+          dvd: "N/A",
+          website: "N/A"
+        },
+        metadata: {
+          fetchedAt: new Date().toISOString(),
+          source: "Live Scraped Data",
+          omdbStatus: "Not Found",
+          randomlySelected: true,
+          totalAvailableMovies: moviesList.length,
+          note: "This movie was found in upcoming releases but doesn't have OMDB data yet"
+        }
       });
     }
 
-    // Clean and format the response
+    // Clean and format the response with OMDB data
     const cleanData = {
       success: true,
       movie: {
-        title: omdbData.Title || "N/A",
+        title: omdbData.Title || randomMovie,
         year: omdbData.Year || "N/A",
-        releaseDate: omdbData.Released || "N/A",
+        releaseDate: omdbData.Released || "Upcoming",
         rated: omdbData.Rated || "N/A",
         runtime: omdbData.Runtime || "N/A",
         
@@ -103,7 +121,8 @@ module.exports = async (req, res) => {
       
       metadata: {
         fetchedAt: new Date().toISOString(),
-        source: "OMDB API",
+        source: "Live Scraped Data + OMDB API",
+        omdbStatus: "Found",
         randomlySelected: true,
         totalAvailableMovies: moviesList.length
       }
@@ -115,7 +134,8 @@ module.exports = async (req, res) => {
     console.error('Error in random endpoint:', error);
     return res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message,
+      message: "Internal server error while fetching random movie"
     });
   }
 };
