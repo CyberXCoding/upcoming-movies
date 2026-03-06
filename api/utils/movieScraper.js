@@ -1,7 +1,7 @@
 const cheerio = require('cheerio');
 const fetch = require('node-fetch');
 
-// Multiple sources for upcoming movies
+// Multiple RELIABLE sources for UPCOMING movies ONLY
 const sources = [
   {
     name: 'Sacnilk',
@@ -9,14 +9,14 @@ const sources = [
     parser: parseSacnilk
   },
   {
-    name: 'FilmiBeat',
-    url: 'https://www.filmibeat.com/bollywood/upcoming-movies.html',
-    parser: parseFilmiBeat
+    name: 'BookMyShow',
+    url: 'https://in.bookmyshow.com/explore/movies-coming-soon',
+    parser: parseBookMyShow
   },
   {
-    name: 'Koimoi',
-    url: 'https://www.koimoi.com/bollywood-news/upcoming-movies/',
-    parser: parseKoimoi
+    name: 'IMDb Upcoming',
+    url: 'https://www.imdb.com/calendar/?region=IN&type=MOVIE',
+    parser: parseIMDb
   }
 ];
 
@@ -41,7 +41,9 @@ function parseSacnilk($) {
         !text.includes('Quick Links') &&
         !text.includes('Industries') &&
         !text.includes('Support') &&
-        !text.includes('Enjoying our content')
+        !text.includes('Enjoying our content') &&
+        !text.includes('Box Office') &&
+        !text.includes('News')
       ) {
         movies.push(text);
       }
@@ -51,32 +53,36 @@ function parseSacnilk($) {
   return movies;
 }
 
-// Parse FilmiBeat
-function parseFilmiBeat($) {
+// Parse BookMyShow
+function parseBookMyShow($) {
   const movies = [];
   
-  $('.movietitle a, .movie-title a, h2 a, h3 a').each((index, element) => {
+  // BookMyShow uses various selectors for movie titles
+  $('a[href*="/movies/"] h3, .movie-card-title, .coming-soon-movie h3').each((index, element) => {
     const text = $(element).text().trim();
-    if (text && text.length > 0 && !text.includes('Advertisement')) {
+    if (text && text.length > 0 && text.length < 100) {
       movies.push(text);
+    }
+  });
+
+  return movies.slice(0, 25);
+}
+
+// Parse IMDb
+function parseIMDb($) {
+  const movies = [];
+  
+  // IMDb calendar page structure
+  $('.list-item h4 a, .ipc-title__text').each((index, element) => {
+    const text = $(element).text().trim();
+    // Remove numbering like "1. Movie Name"
+    const cleaned = text.replace(/^\d+\.\s*/, '');
+    if (cleaned && cleaned.length > 0 && cleaned.length < 100) {
+      movies.push(cleaned);
     }
   });
 
   return movies.slice(0, 20);
-}
-
-// Parse Koimoi
-function parseKoimoi($) {
-  const movies = [];
-  
-  $('h2.entry-title a, h3.entry-title a, .post-title a').each((index, element) => {
-    const text = $(element).text().trim();
-    if (text && text.length > 0 && !text.toLowerCase().includes('box office')) {
-      movies.push(text);
-    }
-  });
-
-  return movies.slice(0, 15);
 }
 
 // Fetch from a single source
